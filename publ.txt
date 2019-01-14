@@ -1,0 +1,126 @@
+CREATE TABLE `country`(
+  `id_country` INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL PRIMARY KEY,
+  `name_country` VARCHAR(255) NOT NULL UNIQUE
+);
+
+CREATE TABLE `authors` (
+  `id_author` INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL PRIMARY KEY,
+  `First_name` VARCHAR(255) NOT NULL,
+  `Last_name` VARCHAR(255) NOT NULL,
+  `id_country` INT UNSIGNED NOT NULL,
+  FOREIGN KEY `authors`(`id_country`) REFERENCES `country`(`id_country`)
+);
+
+CREATE TABLE `themes`(
+  `id_themes` INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL PRIMARY KEY,
+  `name_theme` VARCHAR(255) UNIQUE NOT NULL
+);
+
+CREATE TABLE `books` (
+  `id_book` INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL PRIMARY KEY,
+  `NameBook` VARCHAR(255) UNIQUE NOT NULL,
+  `id_themes` INT UNSIGNED NOT NULL,
+  `id_author` INT UNSIGNED NOT NULL,
+  `Price` FLOAT UNSIGNED NOT NULL,
+  `DrawingOfBook` INT NOT NULL,
+  `DateOfPublish` SMALLINT UNSIGNED NOT NULL,
+  `Pages` SMALLINT UNSIGNED NOT NULL,
+  FOREIGN KEY (`id_themes`) REFERENCES `themes`(`id_themes`) ON UPDATE CASCADE ON DELETE RESTRICT,
+  FOREIGN KEY (`id_author`) REFERENCES `authors` (`id_author`) ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE TABLE `shops`(
+  `id_shop` INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL PRIMARY KEY,
+  `name_shop` VARCHAR(255) UNIQUE NOT NULL,
+  `id_country` INT UNSIGNED NOT NULL,
+  FOREIGN KEY `shops`(`id_country`) REFERENCES `country`(`id_country`) ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE TABLE `sales`(
+  `id_sale` INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL PRIMARY KEY,
+  `id_book` INT UNSIGNED NOT NULL,
+  `date_of_sale` DATE NOT NULL,
+  `price` FLOAT UNSIGNED NOT NULL,
+  `qty` INT UNSIGNED NOT NULL,
+  `id_shop` INT UNSIGNED NOT NULL,
+  FOREIGN KEY (`id_shop`) REFERENCES `shops`(`id_shop`) ON UPDATE CASCADE ON DELETE RESTRICT,
+  FOREIGN KEY (`id_book`) REFERENCES `books`(`id_book`) ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+# Add Data
+
+INSERT INTO `country` (`name_country`) VALUES ('Ukraine'),('USA'),('Great Britain'),('Germany');
+
+INSERT INTO `authors` (`First_name`,`Last_name`,`id_country`) VALUES ('John','Dakett','2'),('Ben','Frain','3'),('Eric','May','3'),('Shay','How','4'),
+  ('Ivanov','Ivan','1');
+
+INSERT INTO `themes` (`name_theme`) VALUES ('HTML&CSS'),('JS'),('PHP'),('MySQL');
+
+INSERT INTO `books` (`NameBook`,`id_themes`,`id_author`,`Price`,`DrawingOfBook`,`DateOfPublish`,`Pages`) VALUES
+  ('HTML & CSS: Design and Build Web Sites','1','1','600.00','100000','2005','550'),
+  ('Responsive Web Design','1','2','550.50','50000','2008','480'),
+  ('CSS Pocket References','1','3','450.30','150000','2010','420'),
+  ('Learn to code HTML and CSS','1','4','340.30','145000','2008','540'),
+  ('Javascript on things','2','1','680.20','65000','2008','550'),
+  ('Javascript for fids','2','3','610.00','78000','2005','360'),
+  ('Speaking PHP','3','5','850.00','100000','2006','620'),
+  ('Mysql and Json','3','5','1050.00','60000','2015','410');
+
+INSERT INTO `shops` (`name_shop`,`id_country`) VALUES ('offline_Ukr','1'),('online_Ukr','1'),('online_USA','2'),('online_Germany','4');
+
+INSERT INTO `sales` (`id_book`,`date_of_sale`,`price`,`qty`,`id_shop`) VALUES ('1','2018-01-30','0','160','1'),('2','2018-02-02','0','552','1'),
+  ('3','2018-02-05','0','1620','2'),('2','2018-02-06','0','126','2'),('4','2018-02-18','0','15','3'),('5','2018-03-05','0','18','3'),('5','2018-02-06',
+  '0','562','4');
+
+#Query's
+
+#1.
+SELECT GROUP_CONCAT(b.NameBook), a.First_name, a.Last_name FROM authors AS a INNER JOIN books b on a.id_author = b.id_author
+  GROUP BY a.First_name LIMIT 3;
+
+#2.
+SELECT b.NameBook, b.Pages FROM books AS b WHERE b.Pages>500 AND b.Pages<650;
+
+#3.
+SELECT b.NameBook FROM books AS b WHERE b.NameBook LIKE 'C%' OR b.NameBook LIKE 'J%';
+
+#4.
+SELECT b.NameBook,b.DrawingOfBook,t.name_theme FROM books AS b INNER JOIN themes t on b.id_themes = t.id_themes WHERE t.name_theme='HTML&CSS'
+  AND b.DrawingOfBook>50000;
+
+#5.
+CREATE TEMPORARY TABLE `temp` (`avg_price` FLOAT UNSIGNED);
+INSERT INTO `temp` SELECT AVG(b.price) FROM books AS b;
+SELECT `avg_price` AS average_price FROM `temp`;
+
+#6. ѕоказать тематики книг и сумму страниц по каждой из них
+SELECT t.name_theme, SUM(b.Pages) FROM `books` AS b INNER JOIN themes t on b.id_themes = t.id_themes GROUP BY t.name_theme;
+
+#7 ¬ывести информацию о книгах по "HTML&CSS" с наибольшим количеством страниц.
+SELECT b.NameBook,b.Pages, t.name_theme FROM  `books` AS b INNER JOIN themes t on b.id_themes = t.id_themes WHERE t.name_theme='HTML&CSS'
+  ORDER BY b.Pages DESC LIMIT 1;
+
+#8 ѕоказать авторов и самую старую книгу по каждому из них. –езультат сохранить в глобальную временную таблицу.
+SELECT a.First_name, a.Last_name, b.DateOfPublish FROM books AS b INNER JOIN authors a on b.id_author = a.id_author;
+SELECT a.First_name, a.Last_name, b.DateOfPublish FROM books AS b INNER JOIN authors a on b.id_author = a.id_author
+  GROUP BY a.Last_name HAVING MAX(b.DateOfPublish);
+
+#9 ¬ывести все книги, которые продаютс€ более чем одним магазином.
+
+#10 — помощью подзапросов найдите всех авторов, которые живут в странах, где есть магазин, который продает их книги. ќтсортировать выборку по фамилии автора.
+
+/*11 —формируйте объединени€ из трех запросов. ѕервое будет выводить список авторов, тематики книг
+которых, например, 'Science Fiction'; второе Ц список
+авторов, которые издавали свои книги в 2014 году;
+треть€ выводит список самых дорогих авторов. ¬
+двух последних запросах сохраните дубликаты. ќтсортировать выборку по фамилии автора по убыванию*/
+
+/*12.”меньшить количество книг в магазинах, которые за
+последний год продали наименьшее количество книг,
+на 15%.*/
+
+
+
+
+
+
