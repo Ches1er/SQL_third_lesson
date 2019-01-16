@@ -2,7 +2,6 @@ CREATE TABLE `country`(
   `id_country` INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL PRIMARY KEY,
   `name_country` VARCHAR(255) NOT NULL UNIQUE
 );
-
 CREATE TABLE `authors` (
   `id_author` INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL PRIMARY KEY,
   `First_name` VARCHAR(255) NOT NULL,
@@ -10,12 +9,10 @@ CREATE TABLE `authors` (
   `id_country` INT UNSIGNED NOT NULL,
   FOREIGN KEY `authors`(`id_country`) REFERENCES `country`(`id_country`)
 );
-
 CREATE TABLE `themes`(
   `id_themes` INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL PRIMARY KEY,
   `name_theme` VARCHAR(255) UNIQUE NOT NULL
 );
-
 CREATE TABLE `books` (
   `id_book` INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL PRIMARY KEY,
   `NameBook` VARCHAR(255) UNIQUE NOT NULL,
@@ -28,14 +25,12 @@ CREATE TABLE `books` (
   FOREIGN KEY (`id_themes`) REFERENCES `themes`(`id_themes`) ON UPDATE CASCADE ON DELETE RESTRICT,
   FOREIGN KEY (`id_author`) REFERENCES `authors` (`id_author`) ON UPDATE CASCADE ON DELETE RESTRICT
 );
-
 CREATE TABLE `shops`(
   `id_shop` INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL PRIMARY KEY,
   `name_shop` VARCHAR(255) UNIQUE NOT NULL,
   `id_country` INT UNSIGNED NOT NULL,
   FOREIGN KEY `shops`(`id_country`) REFERENCES `country`(`id_country`) ON UPDATE CASCADE ON DELETE RESTRICT
 );
-
 CREATE TABLE `sales`(
   `id_sale` INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL PRIMARY KEY,
   `id_book` INT UNSIGNED NOT NULL,
@@ -47,7 +42,7 @@ CREATE TABLE `sales`(
   FOREIGN KEY (`id_book`) REFERENCES `books`(`id_book`) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
-# Add Data
+    # Add Data
 
 INSERT INTO `country` (`name_country`) VALUES ('Ukraine'),('USA'),('Great Britain'),('Germany');
 
@@ -70,23 +65,24 @@ INSERT INTO `shops` (`name_shop`,`id_country`) VALUES ('offline_Ukr','1'),('onli
 
 INSERT INTO `sales` (`id_book`,`date_of_sale`,`price`,`qty`,`id_shop`) VALUES ('1','2018-01-30','0','160','1'),('2','2018-02-02','0','552','1'),
   ('3','2018-02-05','0','1620','2'),('2','2018-02-06','0','126','2'),('4','2018-02-18','0','15','3'),('5','2018-03-05','0','18','3'),('5','2018-02-06',
-  '0','562','4');
-
-#Query's
+                                                                                                                                      '0','562','4');
+    #Query's
 
 #1.
-SELECT GROUP_CONCAT(b.NameBook), a.First_name, a.Last_name FROM authors AS a INNER JOIN books b on a.id_author = b.id_author
-  GROUP BY a.First_name LIMIT 3;
+SELECT b.NameBook, a.First_name, a.Last_name FROM authors AS a INNER JOIN books b on a.id_author = b.id_author
+order by rand() LIMIT 3;
 
 #2.
 SELECT b.NameBook, b.Pages FROM books AS b WHERE b.Pages>500 AND b.Pages<650;
+
 
 #3.
 SELECT b.NameBook FROM books AS b WHERE b.NameBook LIKE 'C%' OR b.NameBook LIKE 'J%';
 
 #4.
-SELECT b.NameBook,b.DrawingOfBook,t.name_theme FROM books AS b INNER JOIN themes t on b.id_themes = t.id_themes WHERE t.name_theme='HTML&CSS'
-  AND b.DrawingOfBook>50000;
+SELECT b.NameBook,b.DrawingOfBook,t.name_theme FROM books AS b INNER JOIN themes t on b.id_themes = t.id_themes
+  WHERE t.name_theme='HTML&CSS'
+    AND b.DrawingOfBook>50000;
 
 #5.
 CREATE TEMPORARY TABLE `temp` (`avg_price` FLOAT UNSIGNED);
@@ -94,35 +90,68 @@ INSERT INTO `temp` SELECT AVG(b.price) FROM books AS b;
 SELECT `avg_price` AS average_price FROM `temp`;
 
 #6. Показать тематики книг и сумму страниц по каждой из них
-SELECT t.name_theme, SUM(b.Pages) FROM `books` AS b INNER JOIN themes t on b.id_themes = t.id_themes GROUP BY t.name_theme;
+SELECT t.name_theme AS theme, SUM(b.Pages) AS summary_pages FROM `books` AS b INNER JOIN themes t on b.id_themes = t.id_themes
+  GROUP BY t.name_theme;
 
 #7 Вывести информацию о книгах по "HTML&CSS" с наибольшим количеством страниц.
-SELECT b.NameBook,b.Pages, t.name_theme FROM  `books` AS b INNER JOIN themes t on b.id_themes = t.id_themes WHERE t.name_theme='HTML&CSS'
-  ORDER BY b.Pages DESC LIMIT 1;
+SELECT b.NameBook,b.Pages, t.name_theme AS theme FROM  `books` AS b INNER JOIN themes t on b.id_themes = t.id_themes
+  WHERE t.name_theme='HTML&CSS'
+    ORDER BY b.Pages DESC LIMIT 1;
 
 #8 Показать авторов и самую старую книгу по каждому из них. Результат сохранить в глобальную временную таблицу.
-SELECT a.First_name, a.Last_name, b.DateOfPublish FROM books AS b INNER JOIN authors a on b.id_author = a.id_author;
-SELECT a.First_name, a.Last_name, b.DateOfPublish FROM books AS b INNER JOIN authors a on b.id_author = a.id_author
-  GROUP BY a.Last_name HAVING MAX(b.DateOfPublish);
+CREATE TEMPORARY TABLE `oldest_book_author` (`id_author` INT,`date` INT);
+
+INSERT INTO `oldest_book_author` SELECT b.id_author,MAX(b.DateOfPublish) FROM `books` AS b GROUP BY b.id_author;
+
+SELECT a.Last_name,b.NameBook,b.DateOfPublish FROM authors AS a INNER JOIN books b on a.id_author = b.id_author
+  WHERE b.DateOfPublish IN (SELECT `date` FROM `oldest_book_author`);
 
 #9 Вывести все книги, которые продаются более чем одним магазином.
 
+CREATE TEMPORARY TABLE `temp_book+shop_sales`
+  (`id_book` INT UNSIGNED,`id_shop` INT UNSIGNED);
 
-#10 С помощью подзапросов найдите всех авторов, которые живут в странах, где есть магазин, который продает их книги. Отсортировать выборку по фамилии автора.
+INSERT INTO `temp_book+shop_sales` SELECT id_book, id_shop
+  FROM `sales` GROUP BY id_book,id_shop;
 
+SELECT tbs.id_book,b.NameBook, COUNT(tbs.id_shop) AS number_of_shops
+    FROM `temp_book+shop_sales` AS tbs INNER JOIN books AS b
+      ON b.id_book=tbs.id_book
+        GROUP BY id_book HAVING COUNT(id_shop)>1;
 
+/*10? С помощью подзапросов найдите всех авторов, которые живут в странах,
+где есть магазин, который продает их книги. Отсортировать выборку по фамилии автора.
+*/
+SELECT sh.name_shop,c.name_country,a.Last_name FROM sales AS sls
+  INNER JOIN shops sh on sls.id_shop = sh.id_shop
+    INNER JOIN country c on sh.id_country = c.id_country
+      INNER JOIN books b on sls.id_book = b.id_book
+        INNER JOIN authors a on b.id_author = a.id_author
+          WHERE sh.id_country IN (SELECT a.id_country)
+            ORDER BY a.Last_name ASC;
+
+;
+SELECT id_book FROM sales WHERE id_book IN
+  (SELECT id_book FROM books WHERE books.id_author
+    IN (SELECT id_author FROM authors
+      WHERE id_country IN (SELECT id_country FROM shops
+        WHERE id_shop IN (SELECT id_shop FROM sales)))) GROUP BY id_book;
 /*11 Сформируйте объединения из трех запросов. Первое будет выводить список авторов, тематики книг
-которых, например, 'Science Fiction'; второе – список
-авторов, которые издавали свои книги в 2014 году;
-третья выводит список самых дорогих авторов. В двух последних запросах сохраните дубликаты.
+которых 'JS'; второе – список авторов, которые издавали свои книги в 2008 году;
+третья выводит список самого дорогого автора. В двух последних запросах сохраните дубликаты.
 Отсортировать выборку по фамилии автора по убыванию*/
+(SELECT a.Last_name,b.NameBook,b.DateOfPublish,b.Price FROM authors AS a
+  INNER JOIN books b on a.id_author = b.id_author
+    INNER JOIN themes t on b.id_themes = t.id_themes WHERE t.name_theme='JS' ORDER BY a.Last_name ASC)
+      UNION ALL
+(SELECT a.Last_name,b.NameBook,b.DateOfPublish,b.Price FROM authors AS a
+  INNER JOIN books b on a.id_author = b.id_author WHERE DateOfPublish=2008 ORDER BY a.Last_name ASC)
+    UNION ALL
+(SELECT a.Last_name,b.NameBook,b.DateOfPublish,b.Price FROM authors AS a
+  INNER JOIN books b on a.id_author = b.id_author WHERE b.Price IN
+    (SELECT MAX(Price) FROM books));
 
 /*12.Уменьшить количество книг в магазинах, которые за
 последний год продали наименьшее количество книг,
-на 15%.*/
-
-
-
-
-
-
+на 15%.
+???*/
