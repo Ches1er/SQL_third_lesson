@@ -151,7 +151,7 @@ SELECT id_book FROM sales WHERE id_book IN
   INNER JOIN books b on a.id_author = b.id_author WHERE b.Price IN
     (SELECT MAX(Price) FROM books));
 
-/*12.Уменьшить количество книг в магазинах, которые за
+/*12.Уменьшить количество проданных книг в магазинах, которые за
 последний год продали наименьшее количество книг,
 на 15%.
 ???*/
