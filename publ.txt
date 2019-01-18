@@ -90,6 +90,7 @@ INSERT INTO `temp` SELECT AVG(b.price) FROM books AS b;
 SELECT `avg_price` AS average_price FROM `temp`;
 
 #6. Показать тематики книг и сумму страниц по каждой из них
+
 SELECT t.name_theme AS theme, SUM(b.Pages) AS summary_pages FROM `books` AS b INNER JOIN themes t on b.id_themes = t.id_themes
   GROUP BY t.name_theme;
 
@@ -99,12 +100,13 @@ SELECT b.NameBook,b.Pages, t.name_theme AS theme FROM  `books` AS b INNER JOIN t
     ORDER BY b.Pages DESC LIMIT 1;
 
 #8 Показать авторов и самую старую книгу по каждому из них. Результат сохранить в глобальную временную таблицу.
-CREATE TEMPORARY TABLE `oldest_book_author` (`id_author` INT,`date` INT);
+CREATE TEMPORARY TABLE `oldest_book_author` (`author_name` VARCHAR(255),`book_name` VARCHAR(255),`date` INT);
 
-INSERT INTO `oldest_book_author` SELECT b.id_author,MAX(b.DateOfPublish) FROM `books` AS b GROUP BY b.id_author;
+INSERT INTO `oldest_book_author` SELECT a.Last_name,b.NameBook,b.DateOfPublish FROM authors AS a
+  INNER JOIN books b on a.id_author = b.id_author
+    WHERE b.DateOfPublish IN (SELECT MAX(b.DateOfPublish) FROM `books` AS b GROUP BY b.id_author);
 
-SELECT a.Last_name,b.NameBook,b.DateOfPublish FROM authors AS a INNER JOIN books b on a.id_author = b.id_author
-  WHERE b.DateOfPublish IN (SELECT `date` FROM `oldest_book_author`);
+SELECT * FROM `oldest_book_author`;
 
 #9 Вывести все книги, которые продаются более чем одним магазином.
 
@@ -136,6 +138,7 @@ SELECT id_book FROM sales WHERE id_book IN
     IN (SELECT id_author FROM authors
       WHERE id_country IN (SELECT id_country FROM shops
         WHERE id_shop IN (SELECT id_shop FROM sales)))) GROUP BY id_book;
+
 /*11 Сформируйте объединения из трех запросов. Первое будет выводить список авторов, тематики книг
 которых 'JS'; второе – список авторов, которые издавали свои книги в 2008 году;
 третья выводит список самого дорогого автора. В двух последних запросах сохраните дубликаты.
@@ -151,7 +154,19 @@ SELECT id_book FROM sales WHERE id_book IN
   INNER JOIN books b on a.id_author = b.id_author WHERE b.Price IN
     (SELECT MAX(Price) FROM books));
 
-/*12.Уменьшить количество проданных книг в магазинах, которые за
-последний год продали наименьшее количество книг,
-на 15%.
-???*/
+/*12.Уменьшить количество проданных книг в магазине, который за
+последний год продал наименьшее количество книг,
+на 15%.*/
+
+CREATE TEMPORARY TABLE `id-shop_sum-sales` (`id` INT,`sum` INT);
+INSERT INTO `id-shop_sum-sales` SELECT id_shop,SUM(qty) AS sum_qty FROM `sales` GROUP BY id_shop ORDER BY sum_qty;
+  #Set variable w id_shop
+SET @min_id = (SELECT id FROM `id-shop_sum-sales` LIMIT 1);
+  #Check variable
+SELECT @min_id;
+  #Check sales data before update
+SELECT qty FROM sales WHERE id_shop=@min_id;
+  #update
+UPDATE sales SET qty = qty*0.85 WHERE id_shop=@min_id;
+  #Check after update
+SELECT qty FROM sales WHERE id_shop=@min_id;
